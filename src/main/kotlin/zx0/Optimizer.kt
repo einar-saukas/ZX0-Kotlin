@@ -50,6 +50,7 @@ class Optimizer {
     private var lastMatch = arrayOfNulls<Block>(0)
     private var optimal = Array(0) { Block() }
     private var matchLength = IntArray(0)
+    private var bestLength = IntArray(0)
 
     fun optimize(input: ByteArray, skip: Int, offsetLimit: Int, threads: Int, verbose: Boolean): Block {
 
@@ -59,6 +60,8 @@ class Optimizer {
         lastMatch = arrayOfNulls(arraySize)
         optimal = Array(input.size) { Block() }
         matchLength = IntArray(arraySize)
+        bestLength = IntArray(input.size)
+        bestLength[2] = 2
 
         // start with fake block
         lastMatch[INITIAL_OFFSET] = Block(-1, skip - 1, INITIAL_OFFSET)
@@ -105,8 +108,6 @@ class Optimizer {
     }
 
     private fun processTask(firstOffset: Int, lastOffset: Int, index: Int, skip: Int, input: ByteArray): Block {
-        val bestLength = IntArray(input.size + 1)
-        bestLength[2] = 2
         var bestLengthSize = 2
         var optimalBlock = Block()
         for (offset in firstOffset..lastOffset) {

@@ -43,7 +43,7 @@ fun zx0(input: ByteArray, skip: Int, classicMode: Boolean, backwardsMode: Boolea
 
 fun main(args: Array<String>) {
 
-    println("ZX0 v2.0: Optimal data compressor by Einar Saukas")
+    println("ZX0 v2.1: Optimal data compressor by Einar Saukas")
 
     // process optional parameters
     var threads = DEFAULT_THREADS

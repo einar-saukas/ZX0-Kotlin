@@ -36,10 +36,13 @@ const val DEFAULT_THREADS = 4
 
 private fun parseInt(s: String) = try { s.toInt() } catch (e: Exception) { -1 }
 
-fun zx0(input: ByteArray, skip: Int, classicMode: Boolean, backwardsMode: Boolean, quickMode: Boolean, threads: Int,
-        verbose: Boolean) = Compressor().compress(
-            Optimizer().optimize(input, skip, if (quickMode) MAX_OFFSET_ZX7 else MAX_OFFSET_ZX0, threads, verbose),
-            input, skip, backwardsMode, !classicMode && !backwardsMode)
+fun zx0(input: ByteArray, skip: Int, backwardsMode: Boolean, classicMode: Boolean, quickMode: Boolean, threads: Int, verbose: Boolean) =
+    Compressor().compress(
+        Optimizer().optimize(input, skip, if (quickMode) MAX_OFFSET_ZX7 else MAX_OFFSET_ZX0, threads, verbose),
+        input, skip, backwardsMode, !classicMode && !backwardsMode)
+
+fun dzx0(input: ByteArray, backwardsMode: Boolean, classicMode: Boolean) =
+    Decompressor().decompress(input, backwardsMode, !classicMode && !backwardsMode)
 
 fun main(args: Array<String>) {
 
@@ -51,6 +54,7 @@ fun main(args: Array<String>) {
     var classicMode = false
     var backwardsMode = false
     var quickMode = false
+    var decompress = false
     var skip = 0
     var i = 0
     while (i < args.size && (args[i].startsWith("-") || args[i].startsWith("+"))) {
@@ -65,6 +69,7 @@ fun main(args: Array<String>) {
             "-c" -> classicMode = true
             "-b" -> backwardsMode = true
             "-q" -> quickMode = true
+            "-d" -> decompress = true
             else -> {
                 skip = parseInt(args[i])
                 if (skip <= 0) {
@@ -76,17 +81,34 @@ fun main(args: Array<String>) {
         i++
     }
 
+    if (decompress && skip > 0) {
+        System.err.println("Error: Decompressing with "+(if (backwardsMode) "suffix" else "prefix")+" not supported")
+        exitProcess(1)
+    }
+
     // determine output filename
     val outputName = when (args.size) {
-        i + 1 -> args[i] + ".zx0"
+        i + 1 -> {
+            if (!decompress) {
+                args[i] + ".zx0"
+            } else {
+                if (args[i].endsWith(".zx0")) {
+                    args[i].removeSuffix(".zx0")
+                } else {
+                    System.err.println("Error: Cannot infer output filename")
+                    exitProcess(1)
+                }
+            }
+        }
         i + 2 -> args[i + 1]
         else -> {
-            System.err.println("""Usage: java -jar zx0.jar [-pN] [-f] [-c] [-b] [-q] input [output.zx0]
+            System.err.println("""Usage: java -jar zx0.jar [-pN] [-f] [-c] [-b] [-q] [-d] input [output.zx0]
   -p      Parallel processing with N threads
   -f      Force overwrite of output file
   -c      Classic file format (v1.*)
   -b      Compress backwards
-  -q      Quick non-optimal compression""")
+  -q      Quick non-optimal compression
+  -d      Decompress""")
             exitProcess(1)
         }
     }
@@ -123,7 +145,16 @@ fun main(args: Array<String>) {
     }
 
     // generate output file
-    val (output, delta) = zx0(input, skip, classicMode, backwardsMode, quickMode, threads, true)
+    val (output, delta) =
+        if (!decompress) {
+            zx0(input, skip, backwardsMode, classicMode, quickMode, threads, true)
+        } else
+            try {
+                Pair(dzx0(input, backwardsMode, classicMode), 0)
+            } catch (e: ArrayIndexOutOfBoundsException) {
+                System.err.println("Error: Invalid input file " + args[i])
+                exitProcess(1)
+            }
 
     // conditionally reverse output file
     if (backwardsMode) {
@@ -139,5 +170,9 @@ fun main(args: Array<String>) {
     }
 
     // done!
-    println("File " + (if (skip != 0) "partially " else "") + "compressed " + (if (backwardsMode) "backwards " else "") + "from " + (input.size - skip) + " to " + output.size + "  bytes! (delta " + delta + ")")
+    if (!decompress) {
+        println("File " + (if (skip != 0) "partially " else "") + "compressed " + (if (backwardsMode) "backwards " else "") + "from " + (input.size - skip) + " to " + output.size + " bytes! (delta " + delta + ")")
+    } else {
+        println("File decompressed " + (if (backwardsMode) "backwards " else "") + "from " + (input.size - skip) + " to " + output.size + " bytes!")
+    }
 }

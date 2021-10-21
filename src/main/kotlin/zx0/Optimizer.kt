@@ -48,7 +48,7 @@ private fun eliasGammaBits(value: Int): Int {
 class Optimizer {
     private var lastLiteral = arrayOfNulls<Block>(0)
     private var lastMatch = arrayOfNulls<Block>(0)
-    private var optimal = Array(0) { Block() }
+    private var optimal = emptyArray<Block>()
     private var matchLength = IntArray(0)
     private var bestLength = IntArray(0)
 
@@ -80,9 +80,9 @@ class Optimizer {
             } else {
                 val taskSize = maxOffset / threads + 1
                 val tasks = LinkedList<Future<Block>>()
-                for (firstOffset in 1..maxOffset step taskSize) {
-                    val lastOffset = min(firstOffset + taskSize - 1, maxOffset)
-                    tasks.add(pool.submit<Block> { processTask(firstOffset, lastOffset, index, skip, input) })
+                for (initialOffset in 1..maxOffset step taskSize) {
+                    val finalOffset = min(initialOffset + taskSize - 1, maxOffset)
+                    tasks.add(pool.submit<Block> { processTask(initialOffset, finalOffset, index, skip, input) })
                 }
                 for (task in tasks) {
                     val taskBlock = task.get()
@@ -107,10 +107,10 @@ class Optimizer {
         return optimal[input.size - 1]
     }
 
-    private fun processTask(firstOffset: Int, lastOffset: Int, index: Int, skip: Int, input: ByteArray): Block {
+    private fun processTask(initialOffset: Int, finalOffset: Int, index: Int, skip: Int, input: ByteArray): Block {
         var bestLengthSize = 2
         var optimalBlock = Block()
-        for (offset in firstOffset..lastOffset) {
+        for (offset in initialOffset..finalOffset) {
             if (index != skip && index >= offset && input[index] == input[index - offset]) {
                 // copy from last offset
                 val lt = lastLiteral[offset]

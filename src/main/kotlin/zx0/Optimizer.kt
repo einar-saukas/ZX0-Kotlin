@@ -61,7 +61,8 @@ class Optimizer {
         optimal = Array(input.size) { Block() }
         matchLength = IntArray(arraySize)
         bestLength = IntArray(input.size)
-        bestLength[2] = 2
+        if (bestLength.size > 2)
+            bestLength[2] = 2
 
         // start with fake block
         lastMatch[INITIAL_OFFSET] = Block(-1, skip - 1, INITIAL_OFFSET)
